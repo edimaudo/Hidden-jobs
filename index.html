@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hidden Jobs 101</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons for the toggle switch -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        /* Base styles use classes defined in the body/app elements */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container-shadow {
+            /* Adjusted shadow to be slightly softer overall */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+        .job-card {
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+        }
+        /* Ensure the hover effect works on the unselected cards */
+        .job-card:not(.bg-indigo-700):not(.bg-indigo-100):hover {
+            transform: translateY(-4px);
+            /* Shadow remains dark for contrast regardless of theme */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- Custom Scrollbar Styles (Dynamic using attribute selector) --- */
+        /* Dark Theme Scrollbar (Default) */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #2d3748; /* Gray-800 */
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d946ef; /* Fuchsia-500 */
+            border-radius: 10px;
+        }
+
+        /* Light Theme Scrollbar */
+        [data-theme="light"] .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f3f4f6; /* Gray-100 */
+        }
+        [data-theme="light"] .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #a78bfa; /* Violet/Indigo for contrast */
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-gray-900 text-gray-100" data-theme="dark">
+
+    <!-- Global container for the app -->
+    <main id="app-container" class="flex-grow p-4 sm:p-8">
+
+        <!-- 1. Landing Page View -->
+        <section id="landing-view" class="h-full flex items-center justify-center text-center">
+            <div class="max-w-4xl p-8 bg-gray-800 rounded-xl container-shadow transition duration-500 ease-in-out transform" id="landing-card">
+                <!-- Updated gradient to Fuchsia/Indigo -->
+                <h1 class="text-4xl sm:text-6xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-indigo-500">
+                    Hidden Jobs 101
+                </h1>
+                <h2 class="text-xl sm:text-2xl font-light text-gray-400 mb-8" id="landing-text">
+                    Empowering future professionals to see jobs outside of the mainstream.
+                </h2>
+                <!-- Updated button colors to Indigo -->
+                <button id="explore-button"
+                        class="px-8 py-3 text-lg font-semibold rounded-full bg-indigo-600 hover:bg-indigo-700 text-white transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-fuchsia-500 focus:ring-opacity-50">
+                    Explore Hidden Jobs
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. Main Application View (Now full width for job list) -->
+        <section id="app-view" class="hidden min-h-[80vh] w-full max-w-5xl mx-auto py-4">
+            <header class="mb-8 text-center flex justify-between items-center">
+                <div class="w-10"></div> <!-- Placeholder for centering -->
+                <div>
+                    <!-- Updated header color to Fuchsia -->
+                    <h1 class="text-4xl font-extrabold text-fuchsia-400" id="header-title">Hidden Jobs Explorer</h1>
+                    <p class="text-gray-400 mt-2" id="header-subtitle">Discover unconventional jobs.</p>
+                </div>
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle" class="p-2 rounded-full text-indigo-400 hover:text-fuchsia-400 transition duration-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-500">
+                    <!-- Moon icon for Dark Theme (visible initially) -->
+                    <span id="moon-wrapper">
+                        <i data-lucide="moon" class="w-6 h-6"></i>
+                    </span>
+                    <!-- Sun icon for Light Theme (hidden initially) -->
+                    <span id="sun-wrapper" class="hidden">
+                        <i data-lucide="sun" class="w-6 h-6"></i>
+                    </span>
+                </button>
+            </header>
+            
+            <!-- Job List Container (Full Width) -->
+            <div class="grid grid-cols-1 gap-4"> 
+                <div class="col-span-1">
+                    <h3 class="text-2xl font-semibold mb-4 pb-2 text-gray-300" id="list-heading"></h3>
+                    <div id="job-list" class="space-y-4 custom-scrollbar max-h-[80vh] overflow-y-auto p-1">
+                        <!-- Job cards and INLINE details will be inserted here by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- 
+                    This entire block serves as the template for the INLINE detail panel 
+                    that gets injected after the clicked job card. It is hidden by default.
+                -->
+                <div id="job-detail-template" class="hidden">
+                    <div class="p-6 rounded-xl container-shadow w-full transition-all duration-300" id="inline-detail-panel">
+                        <div class="w-full space-y-4">
+                            <h3 id="inline-detail-title" class="text-3xl font-bold text-fuchsia-400 border-b border-gray-600 pb-2"></h3>
+                            
+                            <!-- Salary -->
+                            <div class="text-lg font-semibold text-fuchsia-300 detail-subheading">Salary Range (CAD)</div>
+                            <p id="inline-detail-salary" class="text-xl font-extrabold"></p>
+
+                            <!-- What the job is about -->
+                            <div class="text-lg font-semibold text-fuchsia-300 detail-subheading">What the Job is About</div>
+                            <p id="inline-detail-description" class="text-gray-300 detail-body"></p>
+
+                            <!-- Role Requirements -->
+                            <div class="text-lg font-semibold text-fuchsia-300 pt-2 detail-subheading">Role Requirements</div>
+                            <ul class="space-y-1 pl-5 text-sm text-gray-300 detail-body">
+                                <li><strong class="text-white detail-strong">Business:</strong> <span id="inline-detail-req-business"></span></li>
+                                <li><strong class="text-white detail-strong">Technical:</strong> <span id="inline-detail-req-technical"></span></li>
+                            </ul>
+
+                            <!-- Why you would love the job -->
+                            <div class="text-lg font-semibold text-fuchsia-300 pt-2 detail-subheading">Why You'd Love It</div>
+                            <p id="inline-detail-love" class="text-gray-300 detail-body"></p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <script type="module">
+        // Global variables provided by the environment (kept for environment compatibility)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --- STATIC DATA: 25 Real Obscure Jobs (Salary >= CAD 75,000) ---
+        const allJobs = [
+            {
+                "title": "Foresight Analyst (Futurist)",
+                "description": "Analyzes long-term trends (social, tech, environmental) to help organizations anticipate future risks and opportunities, advising on strategy.",
+                "salaryCAD": "CAD $100,000 - $160,000",
+                "requirementsBusiness": "Strategic thinking, scenario planning, excellent presentation skills, cross-disciplinary communication.",
+                "requirementsTechnical": "Proficiency in data visualization tools (e.g., Tableau), statistical modeling, and complex systems theory.",
+                "loveJob": "You get paid to think about the future, shape major company decisions, and engage in deeply intellectual work."
+            },
+            {
+                "title": "Permit Expeditor",
+                "description": "Specialized role managing and fast-tracking all necessary licenses and permits for large construction or development projects.",
+                "salaryCAD": "CAD $75,000 - $110,000",
+                "requirementsBusiness": "Detail-oriented, negotiation skills, strong political acumen, patience, and excellent organizational ability.",
+                "requirementsTechnical": "Deep knowledge of local zoning codes, building regulations, digital permit systems; familiarity with GIS.",
+                "loveJob": "It's a high-impact role that accelerates billion-dollar projects, offering the satisfaction of cutting through red tape."
+            },
+            {
+                "title": "Grave Site Specialist (Cemetery Designer)",
+                "description": "Designs and maps burial sites, crematorium layouts, and memorial gardens, balancing aesthetics with regulations.",
+                "salaryCAD": "CAD $85,000 - $140,000",
+                "requirementsBusiness": "Compassion, project management, client relations (often grieving families), understanding of cultural/religious practices.",
+                "requirementsTechnical": "CAD proficiency (AutoCAD/Revit), landscape architecture principles, and site planning.",
+                "loveJob": "You create lasting, beautiful spaces for remembrance and provide comfort to families during difficult times."
+            },
+            {
+                "title": "Master Sommelier",
+                "description": "A wine expert focused on wine service, pairings, cellar management, and education in high-end hospitality or luxury retail settings.",
+                "salaryCAD": "CAD $90,000 - $150,000+ (plus tips/bonuses)",
+                "requirementsBusiness": "Exceptional customer service, high-level memory for vintages, deep industry networking.",
+                "requirementsTechnical": "Advanced knowledge of viticulture, wine chemistry, tasting skills, certification from a major body.",
+                "loveJob": "You travel the world, taste the finest products, and turn your passion for wine into a highly respected profession."
+            },
+            {
+                "title": "Computational Linguist",
+                "description": "Develops algorithms and models for natural language processing (NLP), bridging computer science with human language rules for AI applications.",
+                "salaryCAD": "CAD $110,000 - $170,000",
+                "requirementsBusiness": "Attention to linguistic detail, clear logical thinking, ability to translate abstract linguistic concepts into concrete code.",
+                "requirementsTechnical": "Strong Python/Java skills, experience with NLP libraries (NLTK, spaCy), machine learning frameworks.",
+                "loveJob": "You teach machines to understand humans, working at the forefront of AI and making technology smarter."
+            },
+            {
+                "title": "Hydrographic Surveyor",
+                "description": "Maps and charts waterways (oceans, rivers, lakes) to determine depths, shapes, and the nature of the seabed for navigation or construction.",
+                "salaryCAD": "CAD $95,000 - $145,000",
+                "requirementsBusiness": "Excellent spatial reasoning, problem-solving under pressure, ability to work outdoors and on water for extended periods.",
+                "requirementsTechnical": "Proficiency with specialized sonar and GPS equipment, data processing software, and GIS mapping tools.",
+                "loveJob": "You are a modern-day explorer, charting unknown territories beneath the surface of the world's waters."
+            },
+            {
+                "title": "Flavourist (Food Scientist)",
+                "description": "A specialized chemist who develops new flavours and modifies existing ones for food, beverage, and pharmaceutical industries.",
+                "salaryCAD": "CAD $90,000 - $155,000",
+                "requirementsBusiness": "Sensory acuity, creativity, adherence to strict regulatory guidelines, and ability to work in R&D teams.",
+                "requirementsTechnical": "Degree in Food Chemistry or Organic Chemistry, deep understanding of aroma compounds, proficiency in chromatography.",
+                "loveJob": "You are a culinary inventor, creating the tastes that billions of people enjoy every day."
+            },
+            {
+                "title": "Cryonics Perfusionist",
+                "description": "A highly specialized technician involved in the rapid cooling and chemical preservation of human bodies after legal death.",
+                "salaryCAD": "CAD $75,000 - $120,000",
+                "requirementsBusiness": "Extreme precision, emotional resilience, ability to perform complex, time-critical procedures under pressure.",
+                "requirementsTechnical": "Training in advanced life support, experience with surgical perfusion, biochemistry, and cryoprotective agents.",
+                "loveJob": "You stand at the boundary of life and death, working on projects with profound philosophical and future scientific implications."
+            },
+            {
+                "title": "Geospatial Data Ethicist",
+                "description": "Focuses on the privacy, bias, and responsible use of location data (GIS, satellite imagery, mobile tracking) by corporations and governments.",
+                "salaryCAD": "CAD $105,000 - $165,000",
+                "requirementsBusiness": "Strong analytical ethics, policy analysis, clear technical communication, and legal/regulatory knowledge (e.g., GDPR).",
+                "requirementsTechnical": "Experience with GIS tools (ArcGIS/QGIS), data privacy frameworks, spatial statistics, and data governance best practices.",
+                "loveJob": "You fight for digital rights, ensuring that powerful location data is used for good, not harm."
+            },
+            {
+                "title": "Wind Turbine Blade Technician",
+                "description": "Performs maintenance, repairs, and inspection of massive turbine blades, often requiring rope access or specialized lift equipment at great heights.",
+                "salaryCAD": "CAD $75,000 - $115,000",
+                "requirementsBusiness": "Comfort with heights, excellent physical fitness, precise manual dexterity, and adherence to rigorous safety standards.",
+                "requirementsTechnical": "Certification in rope access (IRATA/SPRAT), composite material repair (fiberglass/carbon fiber), and basic electrical maintenance knowledge.",
+                "loveJob": "You play a direct, hands-on role in clean energy production, enjoying unique views and a highly active, challenging work environment."
+            },
+            {
+                "title": "Medical Science Liaison (MSL)",
+                "description": "Acts as a non-sales-focused bridge between pharmaceutical companies and key medical opinion leaders, sharing complex clinical data.",
+                "salaryCAD": "CAD $120,000 - $190,000",
+                "requirementsBusiness": "Exceptional communication, scientific rigor, professional maturity, territory management, and presentation skills.",
+                "requirementsTechnical": "Doctoral degree required (PharmD, PhD, or MD), deep expertise in a specific therapeutic area (e.g., oncology, cardiology).",
+                "loveJob": "It combines scientific deep-dive with professional networking, allowing you to influence medical practice without the sales pressure."
+            },
+            {
+                "title": "Digital Archaeologist",
+                "description": "Specializes in recovering and preserving information from failed or obsolete digital media (old hard drives, floppy disks, obscure formats) and historical computer systems.",
+                "salaryCAD": "CAD $90,000 - $140,000",
+                "requirementsBusiness": "Meticulous attention to detail, investigative mindset, patience for painstaking data recovery, historical curiosity.",
+                "requirementsTechnical": "Expertise in various file systems, digital forensics tools (e.g., FTK, EnCase), and low-level programming/hardware interfaces.",
+                "loveJob": "You save humanity's digital history, uncovering lost data and preserving the past in an ever-changing digital landscape."
+            },
+            {
+                "title": "Experience Designer for Extended Reality (XR)",
+                "description": "Designs the complete user journey and interaction models for virtual reality (VR), augmented reality (AR), and mixed reality (MR) applications.",
+                "salaryCAD": "CAD $115,000 - $180,000",
+                "requirementsBusiness": "User-centric empathy, visual design sense, strong understanding of spatial dynamics, rapid prototyping skills.",
+                "requirementsTechnical": "Proficiency with XR development tools (Unity/Unreal), 3D modeling basics, and specialized UX/UI software.",
+                "loveJob": "You are building the next era of computing interaction, making every day a creative challenge in a new dimension."
+            },
+            {
+                "title": "Nanofabrication Engineer",
+                "description": "Works in cleanroom environments to design and manufacture devices and structures on the nanoscale (one-billionth of a meter).",
+                "salaryCAD": "CAD $95,000 - $150,000",
+                "requirementsBusiness": "Extreme precision, meticulous process control, problem-solving in a controlled environment, patience for highly sensitive experiments.",
+                "requirementsTechnical": "Advanced degree in Materials Science or Electrical Engineering, expertise in lithography, etching, and thin-film deposition techniques.",
+                "loveJob": "You build the foundational technology of the future, working with materials and tools invisible to the naked eye."
+            },
+            {
+                "title": "Regulatory Food Labeling Specialist",
+                "description": "Ensures that all product packaging and nutritional information complies with the strict food safety and labeling laws of target markets.",
+                "salaryCAD": "CAD $80,000 - $125,000",
+                "requirementsBusiness": "Exceptional attention to legal text and detail, ability to translate complex regulations into clear requirements, strong communication.",
+                "requirementsTechnical": "Deep knowledge of food safety laws (e.g., CFIA), nutritional science basics, and experience with labeling software.",
+                "loveJob": "You are the gatekeeper of consumer trust, guaranteeing food transparency and safety across vast supply chains."
+            },
+             // --- 10 NEW JOBS ADDED BELOW ---
+            {
+                "title": "Wig Maker / Theatrical Hair Specialist",
+                "description": "Designs, ventilates, and maintains custom wigs and hairpieces for actors in film, television, and high-end theatre productions.",
+                "salaryCAD": "CAD $80,000 - $150,000",
+                "requirementsBusiness": "Artistic vision, patience, high manual dexterity, ability to work under strict production deadlines, excellent interpersonal skills.",
+                "requirementsTechnical": "Specialized training in wig ventilation, knotting, hair coloring, and period-specific styling techniques.",
+                "loveJob": "You are a hidden artist, essential to transforming actors and creating realistic, immersive worlds on screen or stage."
+            },
+            {
+                "title": "Vertical Farm Manager",
+                "description": "Oversies the operations, logistics, and climate control of controlled-environment agriculture (CEA) facilities, maximizing crop yield and efficiency.",
+                "salaryCAD": "CAD $90,000 - $140,000",
+                "requirementsBusiness": "Strong team management, logistics optimization, supply chain knowledge, and business budgeting skills.",
+                "requirementsTechnical": "Horticulture or Agriculture degree, expertise in hydroponics/aeroponics, environmental sensors, and advanced data-driven climate control systems.",
+                "loveJob": "You manage the farms of the future, solving food scarcity problems through high-tech, sustainable indoor operations."
+            },
+            {
+                "title": "Haptic Interface Designer",
+                "description": "Designs and programs the physical sense of touch, vibration, and force-feedback for VR/AR devices, gaming controllers, and automotive interfaces.",
+                "salaryCAD": "CAD $120,000 - $180,000",
+                "requirementsBusiness": "User experience (UX) research, sensory psychology understanding, cross-functional collaboration with hardware/software teams.",
+                "requirementsTechnical": "Software engineering background, C++/Unity/Unreal experience, knowledge of motors/actuators and signal processing.",
+                "loveJob": "You literally design how people feel technology, working on cutting-edge interfaces that blur the line between digital and physical."
+            },
+            {
+                "title": "Certified Ethical Hacker (Penetration Tester)",
+                "description": "Legally attempts to break into systems, networks, and applications to find and exploit security vulnerabilities before malicious actors do.",
+                "salaryCAD": "CAD $100,000 - $180,000",
+                "requirementsBusiness": "Creative problem-solving, high ethical standards, clear documentation of findings, and presentation skills.",
+                "requirementsTechnical": "Certifications (e.g., OSCP, CEH), deep knowledge of network protocols, Linux, scripting (Python/Bash), and forensic tools.",
+                "loveJob": "You are a professional hacker working for good, getting paid to think like a criminal to protect major assets."
+            },
+            {
+                "title": "Vulnerability Researcher (Zero-Day)",
+                "description": "Discovers and analyzes previously unknown security flaws (zero-day exploits) in operating systems or major software platforms.",
+                "salaryCAD": "CAD $130,000 - $200,000+",
+                "requirementsBusiness": "Extreme patience, high level of self-motivation, strong critical thinking, and willingness to share findings responsibly.",
+                "requirementsTechnical": "Expertise in reverse engineering, fuzzing, assembly language, debugging tools (IDA Pro, GDB), and kernel internals.",
+                "loveJob": "You solve the hardest security puzzles in the world, pushing the boundaries of software safety and defense."
+            },
+            {
+                "title": "Yacht Surveyor",
+                "description": "Conducts detailed inspections of high-value yachts and large marine vessels for insurance valuation, structural integrity, and regulatory compliance.",
+                "salaryCAD": "CAD $90,000 - $160,000",
+                "requirementsBusiness": "Impeccable attention to detail, strong reporting and documentation skills, high level of integrity.",
+                "requirementsTechnical": "Marine engineering or naval architecture background, familiarity with maritime regulations (e.g., ABS, Lloyd's Register), and non-destructive testing (NDT).",
+                "loveJob": "You work closely with luxury vessels and travel to exotic marinas, combining high-level engineering with the nautical lifestyle."
+            },
+            {
+                "title": "Acoustic Consultant (Noise Control)",
+                "description": "Analyzes and designs sound environments, minimizing unwanted noise in buildings, concert halls, transportation systems, and industrial sites.",
+                "salaryCAD": "CAD $90,000 - $150,000",
+                "requirementsBusiness": "Client management, communication of complex physics concepts simply, project planning, and architectural understanding.",
+                "requirementsTechnical": "Degree in Acoustics or Physics, proficiency with sound modeling software (e.g., CATT-Acoustic), and measurement equipment.",
+                "loveJob": "You directly impact people's comfort and well-being, using science to solve pervasive problems like noisy neighbors or bad concert sound."
+            },
+            {
+                "title": "Computational Photographer",
+                "description": "Develops algorithms and software that process, enhance, and fuse digital images beyond standard camera limitations (e.g., HDR, portrait mode blur).",
+                "salaryCAD": "CAD $110,000 - $175,000",
+                "requirementsBusiness": "Creativity, understanding of optics and light, collaboration with electrical and software engineers.",
+                "requirementsTechnical": "Background in Computer Vision, Image Processing, and strong C++/Python programming skills; familiarity with camera pipelines.",
+                "loveJob": "You define what a modern photograph is, shaping the visual experience for billions of smartphone users worldwide."
+            },
+            {
+                "title": "Catastrophe Modeler (CAT Modeler)",
+                "description": "Uses complex statistical and geospatial models to quantify potential financial losses from rare, high-impact events like hurricanes, earthquakes, and floods for insurance/reinsurance firms.",
+                "salaryCAD": "CAD $95,000 - $160,000",
+                "requirementsBusiness": "Risk analysis, clear financial reporting, strong communication of probability to non-technical stakeholders.",
+                "requirementsTechnical": "Advanced degree in Actuarial Science, Statistics, or Meteorology; proficiency in R/Python and specialized CAT modeling software (e.g., RMS, AIR).",
+                "loveJob": "You solve multi-billion dollar problems, combining complex science with financial risk management to stabilize industries."
+            },
+            {
+                "title": "Forensic Genealogist",
+                "description": "Uses public and private DNA databases and traditional genealogical research to identify unknown suspects in cold criminal cases or unidentified human remains.",
+                "salaryCAD": "CAD $75,000 - $120,000",
+                "requirementsBusiness": "Exceptional investigative persistence, attention to historical records, emotional sensitivity, and clear presentation of evidence.",
+                "requirementsTechnical": "Expertise in genetic analysis, bioinformatics tools, building complex family trees, and chain-of-custody protocols.",
+                "loveJob": "You bring closure to families and justice to victims, using cutting-edge science to solve mysteries decades in the making."
+            }
+        ];
+
+        // --- View Management and Elements ---
+        const body = document.body;
+        const landingView = document.getElementById('landing-view');
+        const appView = document.getElementById('app-view');
+        const exploreButton = document.getElementById('explore-button');
+        const jobListContainer = document.getElementById('job-list');
+        const themeToggle = document.getElementById('theme-toggle');
+        const sunWrapper = document.getElementById('sun-wrapper');
+        const moonWrapper = document.getElementById('moon-wrapper');
+        const listHeading = document.getElementById('list-heading');
+        
+        // NEW: Detail panel TEMPLATE and INLINE elements for dynamic insertion
+        const detailTemplateContainer = document.getElementById('job-detail-template');
+        const inlineDetailPanel = document.getElementById('inline-detail-panel'); 
+        
+        // State variables for managing the accordion behavior
+        let currentOpenDetailElement = null;
+        let currentJobTitle = null; 
+
+        /**
+         * Sanitizes a string for use in a DOM ID attribute.
+         * This prevents InvalidCharacterError by ensuring only safe characters remain.
+         * @param {string} str The string to sanitize (e.g., job title).
+         * @returns {string} A safe, hyphenated ID segment.
+         */
+        function sanitizeForId(str) {
+            return str
+                .toLowerCase()
+                // Replace all characters that are NOT alphanumeric, spaces, or hyphens with empty string
+                .replace(/[^\w\s\-]/g, '')
+                // Replace one or more spaces with a single hyphen
+                .replace(/[\s]+/g, '-')
+                // Remove leading/trailing hyphens (if the string started/ended with special chars)
+                .replace(/^-+|-+$/g, '');
+        }
+
+        // --- THEME LOGIC ---
+
+        const THEME_CLASSES = {
+            dark: {
+                bodyBg: 'bg-gray-900',
+                textPrimary: 'text-gray-100',
+                textSecondary: 'text-gray-400',
+                cardBg: 'bg-gray-800',
+                cardHover: 'hover:bg-gray-700',
+                detailPanelBg: 'bg-gray-700',
+                accentHighlight: 'text-fuchsia-400',
+                accentSubheading: 'text-fuchsia-300',
+                accentStrong: 'text-white',
+                // Note: These strings contain spaces, but are handled correctly in applyTheme (using split)
+                buttonBg: 'bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-fuchsia-500 focus:ring-opacity-50', 
+                border: 'border-gray-700',
+                toggleIcon: 'text-indigo-400 hover:text-fuchsia-400'
+            },
+            light: {
+                bodyBg: 'bg-gray-100',
+                textPrimary: 'text-gray-800',
+                textSecondary: 'text-gray-600',
+                cardBg: 'bg-white',
+                cardHover: 'hover:bg-gray-200',
+                detailPanelBg: 'bg-white',
+                accentHighlight: 'text-fuchsia-600',
+                accentSubheading: 'text-indigo-700',
+                accentStrong: 'text-indigo-900',
+                // Note: These strings contain spaces, but are handled correctly in applyTheme (using split)
+                buttonBg: 'bg-indigo-700 hover:bg-indigo-800 focus:ring-4 focus:ring-fuchsia-600 focus:ring-opacity-50', 
+                border: 'border-gray-300',
+                toggleIcon: 'text-indigo-600 hover:text-fuchsia-600'
+            }
+        };
+
+        let currentThemeName = 'dark';
+
+        // Function to update the appearance of a single detail element based on theme
+        function updateDetailPanelAppearance(detailElement, theme) {
+            // Update panel background
+            detailElement.classList.remove(THEME_CLASSES.dark.detailPanelBg, THEME_CLASSES.light.detailPanelBg);
+            detailElement.classList.add(theme.detailPanelBg);
+            
+            // Update title color/border
+            const titleElement = detailElement.querySelector('h3');
+            if (titleElement) {
+                titleElement.classList.remove(THEME_CLASSES.dark.accentHighlight, THEME_CLASSES.light.accentHighlight, THEME_CLASSES.dark.border, THEME_CLASSES.light.border);
+                titleElement.classList.add(theme.accentHighlight, theme.border);
+            }
+
+            // Update subheadings, body text, and strong tags
+            detailElement.querySelectorAll('.detail-subheading').forEach(el => {
+                el.classList.remove(THEME_CLASSES.dark.accentSubheading, THEME_CLASSES.light.accentSubheading);
+                el.classList.add(theme.accentSubheading);
+            });
+            detailElement.querySelectorAll('.detail-body').forEach(el => {
+                el.classList.remove(THEME_CLASSES.dark.textPrimary, THEME_CLASSES.light.textPrimary);
+                el.classList.add(theme.textPrimary);
+            });
+            detailElement.querySelectorAll('.detail-strong').forEach(el => {
+                el.classList.remove(THEME_CLASSES.dark.accentStrong, THEME_CLASSES.light.accentStrong);
+                el.classList.add(theme.accentStrong);
+            });
+        }
+
+
+        /**
+         * Removes classes from the opposite theme and adds classes for the current theme.
+         */
+        function applyTheme(themeName) {
+            const theme = THEME_CLASSES[themeName];
+            const oppositeTheme = THEME_CLASSES[currentThemeName]; 
+
+            // Save the current open job title before the list is re-rendered
+            const tempJobTitle = currentJobTitle; 
+
+            // 1. Update Body and Data Attribute
+            body.classList.remove(oppositeTheme.bodyBg, oppositeTheme.textPrimary);
+            body.classList.add(theme.bodyBg, theme.textPrimary);
+            body.setAttribute('data-theme', themeName);
+
+            // 2. Update Header/Landing (Simplified for brevity)
+            document.getElementById('landing-card').classList.remove(oppositeTheme.cardBg);
+            document.getElementById('landing-card').classList.add(theme.cardBg);
+            document.getElementById('landing-text').classList.remove(oppositeTheme.textSecondary);
+            document.getElementById('landing-text').classList.add(theme.textSecondary);
+            document.getElementById('header-title').classList.remove(oppositeTheme.accentHighlight);
+            document.getElementById('header-title').classList.add(theme.accentHighlight);
+            document.getElementById('header-subtitle').classList.remove(oppositeTheme.textSecondary);
+            document.getElementById('header-subtitle').classList.add(theme.textSecondary);
+            listHeading.classList.remove(oppositeTheme.textPrimary);
+            listHeading.classList.add(theme.textPrimary);
+            themeToggle.classList.remove(...oppositeTheme.toggleIcon.split(' '));
+            themeToggle.classList.add(...theme.toggleIcon.split(' '));
+
+            // 3. Update Detail Panel (Updating the single active panel if one exists)
+            if (currentOpenDetailElement) {
+                updateDetailPanelAppearance(currentOpenDetailElement, theme);
+            }
+
+            // 4. Update Button (Landing page button)
+            const exploreBtn = document.getElementById('explore-button');
+            exploreBtn.classList.remove(...oppositeTheme.buttonBg.split(' '));
+            exploreBtn.classList.add(...theme.buttonBg.split(' '));
+
+            // 5. Toggle Icons
+            if (themeName === 'light') {
+                moonWrapper.classList.add('hidden');
+                sunWrapper.classList.remove('hidden');
+            } else {
+                sunWrapper.classList.add('hidden');
+                moonWrapper.classList.remove('hidden');
+            }
+            
+            // 6. Update current theme state and rerender list
+            currentThemeName = themeName;
+            renderJobList(allJobs);
+            
+            // Reapply highlight to the current job if one was selected
+            if (tempJobTitle) {
+                 const job = allJobs.find(j => j.title === tempJobTitle);
+                 // Pass true to forceOpen to ensure it re-opens and does not try to close itself
+                 if(job) toggleJobDetails(job, true); 
+            }
+        }
+
+        /**
+         * Switches the application view from landing page to main app.
+         */
+        function switchToAppView() {
+            landingView.classList.add('hidden');
+            appView.classList.remove('hidden');
+            fetchAndDisplayJobs();
+        }
+
+        /**
+         * Toggles the visibility of job details directly below the clicked card (Accordion style).
+         * @param {object} job - The job object clicked.
+         * @param {boolean} [forceOpen=false] - If true, ignores the close check and forces the detail panel open (used for theme change).
+         */
+        function toggleJobDetails(job, forceOpen = false) { 
+            const sanitizedId = sanitizeForId(job.title);
+            const cardId = `job-card-${sanitizedId}`;
+            const clickedCard = document.getElementById(cardId);
+            const theme = THEME_CLASSES[currentThemeName];
+            
+            const unselectedBg = theme.cardBg;
+            const unselectedHover = theme.cardHover;
+            const selectedBg = currentThemeName === 'dark' ? 'bg-indigo-700' : 'bg-indigo-100';
+            // THIS VARIABLE CONTAINS SPACES - The issue was passing this directly to classList.remove/add
+            const selectedRing = currentThemeName === 'dark' ? 'ring-2 ring-fuchsia-400' : 'ring-2 ring-fuchsia-600'; 
+
+            // --- 1. Determine action based on PRE-CLEANUP state ---
+            // If the clicked job title matches the currently open title AND we are not forcing an open, it's a closing action.
+            const isClosing = currentJobTitle === job.title && !forceOpen; 
+            
+            // --- 2. Clean up previous state (Always close the currently open panel, if one exists) ---
+            if (currentOpenDetailElement) {
+                const prevCard = currentOpenDetailElement.previousElementSibling;
+                if (prevCard) {
+                    // FIX: Use spread and split for selectedRing, as it contains spaces, which classList.remove treats as an invalid character.
+                    prevCard.classList.remove(selectedBg, ...selectedRing.split(' ')); 
+                    // Re-add unselected style
+                    prevCard.classList.add(unselectedBg, unselectedHover);
+                }
+                currentOpenDetailElement.remove();
+                currentOpenDetailElement = null;
+                currentJobTitle = null;
+            }
+
+            // --- 3. If the user clicked to close the panel, we stop here. ---
+            if (isClosing) {
+                return;
+            }
+
+            // --- 4. Open the new detail panel (runs if isClosing was false) ---
+            
+            // Clone the template panel and prepare it for insertion
+            const newDetailPanel = inlineDetailPanel.cloneNode(true);
+            newDetailPanel.id = `job-detail-${sanitizedId}-open`; // Use sanitized ID here too
+            newDetailPanel.classList.remove('hidden');
+            
+            // Populate details into the cloned panel
+            newDetailPanel.querySelector('#inline-detail-title').textContent = job.title;
+            newDetailPanel.querySelector('#inline-detail-salary').textContent = job.salaryCAD;
+            newDetailPanel.querySelector('#inline-detail-description').textContent = job.description;
+            newDetailPanel.querySelector('#inline-detail-req-business').textContent = job.requirementsBusiness;
+            newDetailPanel.querySelector('#inline-detail-req-technical').textContent = job.requirementsTechnical;
+            newDetailPanel.querySelector('#inline-detail-love').textContent = job.loveJob;
+
+            // Apply current theme styles to the new panel
+            updateDetailPanelAppearance(newDetailPanel, theme);
+
+            // Insert the new panel right after the clicked card
+            clickedCard.after(newDetailPanel);
+            
+            // Highlight the clicked card
+            clickedCard.classList.remove(unselectedBg, unselectedHover); // Remove unselected styles
+            // FIX: Use spread and split for selectedRing when adding classes.
+            clickedCard.classList.add(selectedBg, ...selectedRing.split(' ')); 
+
+            // Update the state variables to the NEW open job
+            currentOpenDetailElement = newDetailPanel;
+            currentJobTitle = job.title;
+            
+            // Scroll the card into view
+            clickedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+
+        // --- Job Rendering ---
+        function renderJobList(jobs) {
+            jobListContainer.innerHTML = '';
+            const theme = THEME_CLASSES[currentThemeName];
+
+            jobs.forEach(job => {
+                const jobElement = document.createElement('div');
+                
+                const sanitizedId = sanitizeForId(job.title);
+                jobElement.id = `job-card-${sanitizedId}`; // Use the sanitized ID
+                
+                // Card appearance based on current theme
+                jobElement.className = `job-card p-4 ${theme.cardBg} rounded-lg cursor-pointer transition transform duration-200 ${theme.cardHover} container-shadow`;
+                
+                jobElement.innerHTML = `
+                    <h4 class="text-xl font-semibold ${theme.accentSubheading}">${job.title}</h4>
+                    <p class="text-sm ${theme.textSecondary} mt-1 truncate">${job.description}</p>
+                `;
+
+                // Use the new toggle function
+                jobElement.addEventListener('click', () => toggleJobDetails(job));
+                jobListContainer.appendChild(jobElement);
+            });
+        }
+
+        /**
+         * Main function to control the app's data flow (simplified for static data).
+         */
+        function fetchAndDisplayJobs() {
+            if (allJobs && allJobs.length > 0) {
+                listHeading.textContent = `Total Hidden Jobs: ${allJobs.length}`;
+                renderJobList(allJobs);
+            } else {
+                jobListContainer.innerHTML = '<p class="text-center text-red-400 mt-8">No hidden job data available.</p>';
+            }
+        }
+
+        // --- Event Listeners ---
+        exploreButton.addEventListener('click', switchToAppView);
+
+        themeToggle.addEventListener('click', () => {
+            const newTheme = body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            applyTheme(newTheme);
+        });
+
+        // Initialize Lucide icons on load
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+        });
+
+    </script>
+</body>
+</html>

@@ -1,4 +1,6 @@
 # Hidden-jobs
+
+## About
 A tool for students about jobs outside of the main stream job market
 
 ## Approach
